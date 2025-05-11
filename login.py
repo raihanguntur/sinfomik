@@ -3,8 +3,6 @@ from db import get_connection
 import time
 import sqlite3
 
-# ini komen 
-
 def authenticate(username, password):
     conn = sqlite3.connect('sinfomik.db')
     cursor = conn.cursor()
