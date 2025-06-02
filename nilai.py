@@ -1,6 +1,7 @@
 import streamlit as st
 import sqlite3
 from datetime import datetime
+import pandas as pd
 
 def show_nilai():
     st.title("📝 Rekap Nilai")
@@ -154,86 +155,64 @@ def show_nilai():
         riwayat = cursor.fetchall()
         
         if riwayat:
-            # Tampilkan filter
+            # Buat DataFrame pandas
+            df = pd.DataFrame(riwayat, columns=[
+                "NISN", "Nama", "Jenis Nilai", 
+                "Nilai", "Tanggal", "Mata Pelajaran", "Kelas"
+            ])
+            
+            # Tambahkan filter interaktif
             st.write("**Filter Data:**")
             col1, col2, col3 = st.columns(3)
             with col1:
                 filter_kelas = st.selectbox(
                     "Kelas",
-                    ["Semua"] + sorted(list(set([r[6] for r in riwayat]))),
+                    ["Semua"] + sorted(df["Kelas"].unique().tolist()),
                     key="filter_kelas"
                 )
             with col2:
                 filter_mapel = st.selectbox(
                     "Mata Pelajaran",
-                    ["Semua"] + sorted(list(set([r[5] for r in riwayat]))),
+                    ["Semua"] + sorted(df["Mata Pelajaran"].unique().tolist()),
                     key="filter_mapel"
                 )
             with col3:
                 filter_jenis = st.selectbox(
                     "Jenis Nilai",
-                    ["Semua"] + sorted(list(set([r[2] for r in riwayat]))),
+                    ["Semua"] + sorted(df["Jenis Nilai"].unique().tolist()),
                     key="filter_jenis"
                 )
             
             # Apply filters
-            filtered_data = []
-            for row in riwayat:
-                if (filter_kelas == "Semua" or row[6] == filter_kelas) and \
-                   (filter_mapel == "Semua" or row[5] == filter_mapel) and \
-                   (filter_jenis == "Semua" or row[2] == filter_jenis):
-                    filtered_data.append(row)
+            if filter_kelas != "Semua":
+                df = df[df["Kelas"] == filter_kelas]
+            if filter_mapel != "Semua":
+                df = df[df["Mata Pelajaran"] == filter_mapel]
+            if filter_jenis != "Semua":
+                df = df[df["Jenis Nilai"] == filter_jenis]
             
-            # Tampilkan dalam bentuk tabel HTML sederhana
-            st.write("""
-            <style>
-            .nilai-table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            .nilai-table th, .nilai-table td {
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-            }
-            .nilai-table tr:nth-child(even) {
-                background-color: #f2f2f2;
-            }
-            .nilai-table th {
-                background-color: #4CAF50;
-                color: white;
-            }
-            </style>
+            # Format kolom
+            df["Tanggal"] = pd.to_datetime(df["Tanggal"]).dt.strftime('%d-%m-%Y')
             
-            <table class="nilai-table">
-                <tr>
-                    <th>NISN</th>
-                    <th>Nama</th>
-                    <th>Kelas</th>
-                    <th>Mapel</th>
-                    <th>Jenis</th>
-                    <th>Nilai</th>
-                    <th>Tanggal</th>
-                </tr>
-            """, unsafe_allow_html=True)
+            # Tampilkan tabel dengan st.dataframe
+            st.dataframe(
+                df,
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "NISN": st.column_config.TextColumn(width="small"),
+                    "Nilai": st.column_config.NumberColumn(
+                        format="%d",
+                        width="small"
+                    ),
+                    "Tanggal": st.column_config.DateColumn(width="small")
+                },
+                height=min(400, 35 * len(df) + 38)  # Atur tinggi dinamis
+            )
             
-            for row in filtered_data:
-                st.write(f"""
-                <tr>
-                    <td>{row[0]}</td>
-                    <td>{row[1]}</td>
-                    <td>{row[6]}</td>
-                    <td>{row[5]}</td>
-                    <td>{row[2]}</td>
-                    <td>{row[3]}</td>
-                    <td>{row[4]}</td>
-                </tr>
-                """, unsafe_allow_html=True)
             
-            st.write("</table>", unsafe_allow_html=True)
+            st.caption(f"Menampilkan {len(df)} dari {len(riwayat)} data nilai")
             
-            # Tampilkan jumlah data
-            st.write(f"Menampilkan {len(filtered_data)} dari {len(riwayat)} data nilai")
         else:
             st.info("Belum ada data nilai yang tersimpan")
             

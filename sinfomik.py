@@ -1,15 +1,15 @@
 import streamlit as st
+
 from dashboard import show_dashboard
 from siswa import show_siswa
 from nilai import show_nilai
 from login import show_login
 from logout import show_logout
+from semester import show_semester
 
-# Initialize session state
+# Set default page on first load
 if "page" not in st.session_state:
     st.session_state.page = "dashboard"
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
 
 # Sidebar layout
 st.sidebar.title("📚 Navigasi")
@@ -32,50 +32,56 @@ def nav_button(label, key):
     if st.sidebar.button(label, key=key, use_container_width=True):
         st.session_state.page = key
 
-# Define navigation
-NAV_ITEMS = {
-    "dashboard": {"label": "🏠 Dashboard", "show": True},
-    "siswa": {"label": "👨‍🎓 Siswa", "show": "logged_in"},
-    "nilai": {"label": "📝 Nilai", "show": "logged_in"},
-    "login": {"label": "🚪 Login", "show": "not_logged_in"},
-    "logout": {"label": "🚪 Logout", "show": "logged_in"}
-}
+# Define sidebar buttons
+# Sidebar buttons berdasarkan status login
+nav_button("🏠 Dashboard", "dashboard")
+if st.session_state.get("logged_in", False):
+    nav_button("👨‍🎓 Siswa", "siswa")
+    nav_button("📝 Nilai", "nilai")
+    nav_button("📅 Semester", "semester")
+    nav_button("🚪 Logout", "logout")
+else:
+    nav_button("🚪 Login", "login")
 
-for key, item in NAV_ITEMS.items():
-    show_item = True
-    if isinstance(item["show"], str):
-        if item["show"] == "logged_in":
-            show_item = st.session_state.get("logged_in", False)
-        elif item["show"] == "not_logged_in":
-            show_item = not st.session_state.get("logged_in", False)
-    
-    if show_item:
-        nav_button(item["label"], key)
 
 # Page routing
-PAGE_HANDLERS = {
-    "dashboard": show_dashboard,
-    "siswa": show_siswa,
-    "nilai": show_nilai,
-    "login": show_login,
-    "logout": show_logout
-}
-
 page = st.session_state.page
 
-try:
-    # Check authentication for protected pages
-    if page in ["siswa", "nilai", "logout"] and not st.session_state.get("logged_in", False):
+# Pastikan status login diinisialisasi
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if page == "login":
+    show_login()
+elif page == "logout":
+    if st.session_state.logged_in:
+        show_logout()
+    else:
         st.warning("Silakan login terlebih dahulu.")
         st.session_state.page = "login"
         st.rerun()
-    
-    # Show the page
-    if page in PAGE_HANDLERS:
-        PAGE_HANDLERS[page]()
+elif page == "siswa":
+    if st.session_state.logged_in:
+        show_siswa()
     else:
-        st.error("Halaman tidak ditemukan.")
-
-except Exception as e:
-    st.error(f"Terjadi kesalahan: {str(e)}")
-    st.stop()
+        st.warning("Silakan login terlebih dahulu.")
+        st.session_state.page = "login"
+        st.rerun()
+elif page == "nilai":
+    if st.session_state.logged_in:
+        show_nilai()
+    else:
+        st.warning("Silakan login terlebih dahulu.")
+        st.session_state.page = "login"
+        st.rerun()
+elif page == "semester":
+    if st.session_state.logged_in:
+        show_semester()
+    else:
+        st.warning("Silakan login terlebih dahulu.")
+        st.session_state.page = "login"
+        st.rerun()
+elif page == "dashboard":
+    show_dashboard()  # dashboard bisa diakses siapa saja
+else:
+    st.error("Halaman tidak ditemukan.")
